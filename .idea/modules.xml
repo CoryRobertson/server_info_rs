@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/server_info_client_rs/server_info_client_rs.iml" filepath="$PROJECT_DIR$/server_info_client_rs/server_info_client_rs.iml" />
+      <module fileurl="file://$PROJECT_DIR$/server_info_rs.iml" filepath="$PROJECT_DIR$/server_info_rs.iml" />
+      <module fileurl="file://$PROJECT_DIR$/server_info_server_rs/server_info_server_rs.iml" filepath="$PROJECT_DIR$/server_info_server_rs/server_info_server_rs.iml" />
+    </modules>
+  </component>
+</project>
