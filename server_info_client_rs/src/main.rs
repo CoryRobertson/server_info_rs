@@ -51,11 +51,12 @@ impl eframe::App for MyEguiApp {
                     self.stream.as_ref().unwrap().read_to_end(&mut self.buf_vec).unwrap();
                     data = String::from_utf8_lossy(&*self.buf_vec);
                     self.server_info = deserialize_server_info(&data.to_string());
+                    println!("server info overwritten");
                     data.len() != 0
                 }
                 None => {false}
             };
-
+            self.stream = None;
 
             ui.text_edit_singleline(&mut self.address);
 
@@ -95,8 +96,38 @@ impl eframe::App for MyEguiApp {
                 println!("{}", self.server_info);
                 self.buf_vec.clear();
 
+
             }
 
+            ui.label(&self.server_info.get_date_time().to_string());
+
+            for disk in &self.server_info.disks {
+                ui.label(disk);
+            }
+
+            for iface in &self.server_info.net_interfaces {
+                ui.label(iface);
+            }
+
+            ui.label(&self.server_info.total_cpus.to_string());
+            for cpu in &self.server_info.cpus {
+                ui.label(cpu);
+            }
+            ui.label(&self.server_info.avg_cpu_usage.to_string());
+
+            ui.label(&self.server_info.total_ram.to_string());
+            ui.label(&self.server_info.used_memory.to_string());
+
+
+            ui.label(&self.server_info.system_name);
+            ui.label(&self.server_info.kernel_version);
+            ui.label(&self.server_info.os_version);
+            ui.label(&self.server_info.host_name);
+
+
+
+
+            //println!("{}", self.server_info.date);
 
 
             self.frames = self.frames + 1;
@@ -108,6 +139,7 @@ impl eframe::App for MyEguiApp {
                         Ok(s) => {
                             Some(s)
                         }
+
                         Err(_) => {
                             println!("tcp stream failed to connect.");
                             None
