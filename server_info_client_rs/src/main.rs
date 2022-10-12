@@ -35,17 +35,22 @@ impl MyEguiApp {
     }
 }
 
+fn deserialize_server_info(data: &String) -> ServerInfo {
+    return serde_json::from_str(data).unwrap_or_default();
+}
+
 impl eframe::App for MyEguiApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
 
+            ctx.request_repaint();
             let mut data= Cow::default();
 
             let found_data = match self.stream {
                 Some(_) => {
                     self.stream.as_ref().unwrap().read_to_end(&mut self.buf_vec).unwrap();
                     data = String::from_utf8_lossy(&*self.buf_vec);
-
+                    self.server_info = deserialize_server_info(&data.to_string());
                     data.len() != 0
                 }
                 None => {false}
@@ -87,6 +92,7 @@ impl eframe::App for MyEguiApp {
 
             if found_data {
                 println!("{}", data);
+                println!("{}", self.server_info);
                 self.buf_vec.clear();
 
             }
