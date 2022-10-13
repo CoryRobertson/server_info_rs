@@ -2,15 +2,11 @@
 
 
 pub mod server_info_packet {
+
     use std::fmt;
-    use std::fmt::{Formatter, Write};
-    use chrono::{DateTime, NaiveDateTime, Utc};
-    use chrono_tz::Tz;
+    use std::fmt::{Formatter};
     use serde::{Deserialize, Serialize, Serializer};
-    use chrono_tz::US::Pacific;
-    use chrono::{TimeZone};
     use serde::ser::SerializeStruct;
-    use sysinfo::System;
 
     #[derive(Deserialize)]
     #[derive(Default)]
@@ -31,22 +27,6 @@ pub mod server_info_packet {
     }
 
     impl ServerInfo {
-        pub fn get_date_time(&self) -> DateTime<Tz> {
-            // pacific time zone conversion
-            let utc = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(self.date, 0), Utc).naive_utc();
-            Pacific.from_utc_datetime(&utc)
-        }
-
-        pub fn list_vec_into_string(&self, vector: &Vec<String>) -> String {
-
-            let mut output = String::new();
-
-            for data in vector {
-                output.write_fmt(format_args!("{}", data)).expect("TODO: panic message");
-            }
-            return output;
-
-        }
 
     }
 

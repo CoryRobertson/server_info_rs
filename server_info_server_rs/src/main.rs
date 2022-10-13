@@ -1,12 +1,10 @@
-use std::fmt::Write;
 use std::io::{Write as OtherWrite};
 use std::net::{Shutdown, TcpListener, TcpStream};
 use std::thread;
 use std::time::Duration;
 use chrono::Utc;
-use serde::Serialize;
 use std::string::String;
-use sysinfo::{CpuExt, NetworkExt, ProcessExt, System, SystemExt};
+use sysinfo::{CpuExt, NetworkExt, System, SystemExt};
 use crate::server_info_packet::server_info_packet::ServerInfo;
 
 mod server_info_packet;
