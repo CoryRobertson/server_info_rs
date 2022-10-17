@@ -81,7 +81,7 @@ impl eframe::App for MyEguiApp {
 
             let found_data = match self.stream {
                 Some(_) => {
-                    self.stream.as_ref().unwrap().read_to_end(&mut self.buf_vec).unwrap();
+                    self.stream.as_ref().unwrap().read_to_end(&mut self.buf_vec).unwrap_or_default();
                     data = String::from_utf8_lossy(&*self.buf_vec);
                     self.server_info = deserialize_server_info(&data.to_string());
                     println!("server info overwritten");
@@ -130,7 +130,7 @@ impl eframe::App for MyEguiApp {
                     None => {println!("failed to disconnect");}
                     Some(strm) => {
                         println!("disconnected");
-                        strm.shutdown(Shutdown::Both).unwrap();
+                        strm.shutdown(Shutdown::Both).expect("Unable to shutdown tcp stream.");
                         self.stream = None;
                         //self.connecting = false;
                     }
