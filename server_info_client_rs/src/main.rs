@@ -1,3 +1,5 @@
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 use std::borrow::Cow;
 use std::io::{Read};
 use std::net::{Shutdown, TcpStream};
@@ -18,7 +20,7 @@ struct MyEguiApp {
     stream: Option<TcpStream>,
     buf_vec: Vec<u8>,
     address: String,
-    server_info: ServerInfo,
+    server_info: ServerInfo, // TODO: have the program remember previous address used, could be simple text file
     auto_refresh: bool,
     frames: i32,
     displaying_disks: bool,
@@ -32,7 +34,7 @@ impl MyEguiApp {
         Self{
             stream: None,
             buf_vec: vec![],
-            address: "localhost:8111".to_string(),
+            address: "localhost:8111".to_string(), // TODO: have the program remember previous address used, could be simple text file
             server_info: ServerInfo::default(),
             auto_refresh: false,
             frames: 0,
