@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::borrow::Cow;
-use std::io::{Read};
+use std::io::{Read, Write};
 use std::net::{Shutdown, TcpStream};
 use eframe::egui;
 use crate::egui::{Color32, Vec2};
@@ -83,12 +83,23 @@ impl eframe::App for MyEguiApp {
 
             let found_data = match self.stream {
                 Some(_) => {
-                    self.stream.as_ref().unwrap().read_to_end(&mut self.buf_vec).unwrap_or_default();
-                    data = String::from_utf8_lossy(&*self.buf_vec);
-                    self.server_info = deserialize_server_info(&data.to_string());
-                    println!("server info overwritten");
-                    self.stream = None; // remove the stream after receiving the data.
-                    data.len() != 0
+                    if self.frames > 119 {
+                        //println!("gathering data...");
+                        let mut small_buf:[u8 ; 4096] = [0 ; 4096];
+
+                        self.stream.as_ref().unwrap().read(&mut small_buf).unwrap_or_default();
+                        for value in small_buf {
+                            if !String::from_utf8_lossy(&[value]).contains("\0") {
+                                self.buf_vec.push(value);
+                            }
+                        }
+
+                        let _ = self.stream.as_ref().unwrap().write(&[0]);
+                        data = String::from_utf8_lossy(&*self.buf_vec);
+                        self.server_info = deserialize_server_info(&data.to_string());
+
+                        }
+                    true
                 }
                 None => {false}
             };
@@ -143,6 +154,7 @@ impl eframe::App for MyEguiApp {
             if found_data {
                 //println!("{}", data);
                 //println!("{}", self.server_info);
+
                 self.buf_vec.clear();
             }
 

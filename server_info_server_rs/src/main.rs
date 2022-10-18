@@ -1,4 +1,4 @@
-use std::io::{Write as OtherWrite};
+use std::io::{Read, Write as OtherWrite};
 use std::net::{Shutdown, TcpListener, TcpStream};
 use std::thread;
 use std::time::Duration;
@@ -15,13 +15,14 @@ fn main() {
 
     let listener = TcpListener::bind("0.0.0.0:8111").unwrap();
     let mut count = 0;
-
+    let mut stream = listener.accept().unwrap().0;
+    
     loop {
-        let stream = listener.accept().unwrap().0;
 
         handle_client(&stream, generate_server_info_packet());
         println!("sent client data, waiting...");
         count = count + 1;
+
 
     }
 
@@ -82,7 +83,16 @@ fn handle_client(mut stream: &TcpStream, info: ServerInfo) {
 
     let ser = serde_json::to_string(&info).unwrap_or_default();
 
-    stream.write_all(ser.as_bytes()).expect("Unable to write data to client stream.");
-    stream.shutdown(Shutdown::Both).expect("Unable to shutdown client stream.");
+    // stream.write_all(ser.as_bytes()).expect("Unable to write data to client stream.");
+
+    let _ = stream.write(ser.as_bytes());
+
+    let _ = stream.flush();
+
+    //println!("sent: {}", ser.len());
+
+    let _ = stream.read(&mut [0;128]);
+
+    //stream.shutdown(Shutdown::Both).expect("Unable to shutdown client stream.");
 
 }
