@@ -4,6 +4,7 @@ use std::thread;
 use std::time::Duration;
 use chrono::Utc;
 use std::string::String;
+use std::thread::JoinHandle;
 use sysinfo::{CpuExt, NetworkExt, System, SystemExt};
 use crate::server_info_packet::server_info_packet::ServerInfo;
 
@@ -14,16 +15,26 @@ fn main() {
     println!("Listening for connections on port 8111!");
 
     let listener = TcpListener::bind("0.0.0.0:8111").unwrap();
-    let mut count = 0;
-    let mut stream = listener.accept().unwrap().0;
+
+    let mut thread_vec:Vec<JoinHandle<()>> = vec![];
+
+    for incomming in listener.incoming() {
+        let handle = thread::spawn(move || {
+            let stream = incomming.expect("failed to handle");
+            println!("Client connected: {:?}", stream);
+            loop {
+                if !handle_client(&stream,generate_server_info_packet()) {
+                    println!("Client disconnected: {:?}", stream);
+                    break;
+                }
+            }
+        });
+        // TODO: add more useful information to print out such as how many currently connected clients are there here.
+        thread_vec.push(handle);
+    }
     
-    loop {
-
-        handle_client(&stream, generate_server_info_packet());
-        println!("sent client data, waiting...");
-        count = count + 1;
-
-
+    for handle in thread_vec {
+        handle.join().expect("TODO: panic message");
     }
 
 }
@@ -79,20 +90,26 @@ fn generate_server_info_packet() -> ServerInfo {
     ServerInfo{ date: Utc::now().timestamp(), disks, net_interfaces, components, total_ram, used_memory, system_name, kernel_version, os_version, host_name, total_cpus, cpus, avg_cpu_usage }
 }
 
-fn handle_client(mut stream: &TcpStream, info: ServerInfo) {
+fn handle_client(mut stream: &TcpStream, info: ServerInfo) -> bool {
 
     let ser = serde_json::to_string(&info).unwrap_or_default();
 
     // stream.write_all(ser.as_bytes()).expect("Unable to write data to client stream.");
 
-    let _ = stream.write(ser.as_bytes());
+    let write = stream.write(ser.as_bytes());
 
-    let _ = stream.flush();
+    let flush = stream.flush();
 
     //println!("sent: {}", ser.len());
 
-    let _ = stream.read(&mut [0;128]);
+    let read = stream.read(&mut [0;128]);
 
+    if write.is_err() || flush.is_err() || read.is_err() {
+        
+        stream.shutdown(Shutdown::Both).expect("Unable to shutdown client stream.");
+        return false;
+    }
+
+    return true;
     //stream.shutdown(Shutdown::Both).expect("Unable to shutdown client stream.");
-
 }

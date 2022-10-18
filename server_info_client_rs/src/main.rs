@@ -84,20 +84,17 @@ impl eframe::App for MyEguiApp {
             let found_data = match self.stream {
                 Some(_) => {
                     if self.frames > 119 {
-                        //println!("gathering data...");
                         let mut small_buf:[u8 ; 4096] = [0 ; 4096];
-
                         self.stream.as_ref().unwrap().read(&mut small_buf).unwrap_or_default();
-                        for value in small_buf {
+
+                        for value in small_buf { // make small buffer of the data into a vector sent by the server
                             if !String::from_utf8_lossy(&[value]).contains("\0") {
                                 self.buf_vec.push(value);
                             }
                         }
-
                         let _ = self.stream.as_ref().unwrap().write(&[0]);
-                        data = String::from_utf8_lossy(&*self.buf_vec);
-                        self.server_info = deserialize_server_info(&data.to_string());
-
+                        data = String::from_utf8_lossy(&*self.buf_vec); // convert the vector to a string
+                        self.server_info = deserialize_server_info(&data.to_string()); // deserialize the string into a server info struct
                         }
                     true
                 }
@@ -123,8 +120,7 @@ impl eframe::App for MyEguiApp {
                 });
             });
 
-            if ui.button("refresh?").clicked() {
-                //self.connecting = true;
+            if ui.button("Connect").clicked() {
                 self.stream = match TcpStream::connect(self.address.as_str()) {
                     Ok(s) => {
                         Some(s)
@@ -136,25 +132,19 @@ impl eframe::App for MyEguiApp {
                 }
             }
 
-            ui.checkbox(&mut self.auto_refresh,"auto-refresh");
-
-            if ui.button("disconnect").clicked() {
+            if ui.button("Disconnect").clicked() {
                 match &self.stream {
                     None => {println!("failed to disconnect");}
                     Some(strm) => {
                         println!("disconnected");
                         strm.shutdown(Shutdown::Both).expect("Unable to shutdown tcp stream.");
                         self.stream = None;
-                        //self.connecting = false;
                     }
                 }
                     
             }
 
             if found_data {
-                //println!("{}", data);
-                //println!("{}", self.server_info);
-
                 self.buf_vec.clear();
             }
 
@@ -173,12 +163,11 @@ impl eframe::App for MyEguiApp {
             }
 
             if self.displaying_cpus {
-                //ui.label(&self.server_info.total_cpus.to_string());
-
                 for cpu in &self.server_info.cpus {
                     ui.colored_label(Color32::from_rgb(255,255,255),cpu);
                 }
             }
+
 
             ui.horizontal(|ui| {
                 ui.label("Average CPU Usage: ");
@@ -221,24 +210,11 @@ impl eframe::App for MyEguiApp {
                 ui.label(&self.server_info.host_name);
             });
 
-            //println!("{}", self.server_info.date);
 
             self.frames = self.frames + 1;
 
             if self.frames > 120 {
                 self.frames = 0;
-                if self.auto_refresh {
-                    self.stream = match TcpStream::connect(self.address.as_str()) {
-                        Ok(s) => {
-                            Some(s)
-                        }
-
-                        Err(_) => {
-                            println!("tcp stream failed to connect.");
-                            None
-                        }
-                    }
-                }
             }
         });
     }
