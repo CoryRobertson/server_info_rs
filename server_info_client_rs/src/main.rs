@@ -21,6 +21,7 @@ struct MyEguiApp {
     buf_vec: Vec<u8>,
     address: String,
     server_info: ServerInfo, // TODO: have the program remember previous address used, could be simple text file
+    // TODO: also have the program remember the previous sessions window size, so it can copy that as well, not sure if possible due to having to load native options before egui, worth a try.
     frames: i32,
     displaying_disks: bool,
     displaying_interfaces: bool,
@@ -70,8 +71,12 @@ fn toggle_ui_compact(ui: &mut egui::Ui, on: &mut bool) -> egui::Response {
     response
 }
 
-fn deserialize_server_info(data: &String) -> ServerInfo {
-    return serde_json::from_str(data).unwrap_or_default();
+fn deserialize_server_info(data: &String) -> Option<ServerInfo> {
+     let result = serde_json::from_str(data);
+    return if result.is_ok() {
+        Some(result.unwrap())
+    } else { None }
+
 }
 
 impl eframe::App for MyEguiApp {
@@ -94,8 +99,11 @@ impl eframe::App for MyEguiApp {
                         }
                         let _ = self.stream.as_ref().unwrap().write(&[0]);
                         data = String::from_utf8_lossy(&*self.buf_vec); // convert the vector to a string
-                        self.server_info = deserialize_server_info(&data.to_string()); // deserialize the string into a server info struct
+                        match deserialize_server_info(&data.to_string()) { // deserialize the string into a server info struct only if the data received was able to be deserialized properly
+                            Some(sinfo) => self.server_info = sinfo,
+                            None => (),
                         }
+                    }
                     true
                 }
                 None => {false}
@@ -122,6 +130,7 @@ impl eframe::App for MyEguiApp {
 
             if ui.button("Connect").clicked() {
                 self.stream = match TcpStream::connect(self.address.as_str()) {
+                    // TODO: probably best to save the connected session here as this runs rarely.
                     Ok(s) => {
                         Some(s)
                     }

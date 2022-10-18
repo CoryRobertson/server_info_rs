@@ -42,9 +42,10 @@ fn main() {
                 }
             }
         });
-        println!("Number of currently connected clients: {}",thread_vec.len() + 1);
 
         thread_vec.push(handle);
+        println!("Number of currently connected clients: {}",thread_vec.len());
+
     }
     
     for handle in thread_vec {
