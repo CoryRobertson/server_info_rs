@@ -19,6 +19,19 @@ fn main() {
     let mut thread_vec:Vec<JoinHandle<()>> = vec![];
 
     for incomming in listener.incoming() {
+
+        for i in 0..thread_vec.len() {
+            match thread_vec.get(i) {
+                None => {}
+                Some(t) => {
+                    if t.is_finished() {
+                        //println!("Thread finished: {:?}", thread_vec.get(i).unwrap());
+                        thread_vec.remove(i);
+                    }
+                }
+            }
+        }
+
         let handle = thread::spawn(move || {
             let stream = incomming.expect("failed to handle");
             println!("Client connected: {:?}", stream);
@@ -29,7 +42,8 @@ fn main() {
                 }
             }
         });
-        // TODO: add more useful information to print out such as how many currently connected clients are there here.
+        println!("Number of currently connected clients: {}",thread_vec.len() + 1);
+
         thread_vec.push(handle);
     }
     

@@ -21,11 +21,11 @@ struct MyEguiApp {
     buf_vec: Vec<u8>,
     address: String,
     server_info: ServerInfo, // TODO: have the program remember previous address used, could be simple text file
-    auto_refresh: bool,
     frames: i32,
     displaying_disks: bool,
     displaying_interfaces: bool,
     displaying_cpus: bool,
+    update_rate: f32,
 
 }
 
@@ -36,11 +36,11 @@ impl MyEguiApp {
             buf_vec: vec![],
             address: "localhost:8111".to_string(), // TODO: have the program remember previous address used, could be simple text file
             server_info: ServerInfo::default(),
-            auto_refresh: false,
             frames: 0,
             displaying_disks: false,
             displaying_interfaces: false,
-            displaying_cpus: false
+            displaying_cpus: false,
+            update_rate: 0.5
         }
     }
 }
@@ -83,7 +83,7 @@ impl eframe::App for MyEguiApp {
 
             let found_data = match self.stream {
                 Some(_) => {
-                    if self.frames > 119 {
+                    if self.frames as f32 > (60.0)/self.update_rate {
                         let mut small_buf:[u8 ; 4096] = [0 ; 4096];
                         self.stream.as_ref().unwrap().read(&mut small_buf).unwrap_or_default();
 
@@ -132,16 +132,20 @@ impl eframe::App for MyEguiApp {
                 }
             }
 
+            ui.horizontal(|ui| {
+                ui.label("Update Rate: ");
+                ui.add(egui::Slider::new(&mut self.update_rate,0.1..=2.0)).on_hover_text("Update rate per second.");
+            });
+
             if ui.button("Disconnect").clicked() {
                 match &self.stream {
                     None => {println!("failed to disconnect");}
-                    Some(strm) => {
+                    Some(stream) => {
                         println!("disconnected");
-                        strm.shutdown(Shutdown::Both).expect("Unable to shutdown tcp stream.");
+                        stream.shutdown(Shutdown::Both).expect("Unable to shutdown tcp stream.");
                         self.stream = None;
                     }
                 }
-                    
             }
 
             if found_data {
@@ -210,12 +214,10 @@ impl eframe::App for MyEguiApp {
                 ui.label(&self.server_info.host_name);
             });
 
-
-            self.frames = self.frames + 1;
-
-            if self.frames > 120 {
+            if self.frames as f32 > ((60.0) / self.update_rate) {
                 self.frames = 0;
             }
+            self.frames = self.frames + 1;
         });
     }
 
