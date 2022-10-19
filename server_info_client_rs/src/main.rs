@@ -1,12 +1,16 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+extern crate core;
+
 use std::borrow::Cow;
 use std::io::{Read, Write};
 use std::net::{Shutdown, TcpStream};
 use eframe::egui;
 use crate::egui::{Color32, Vec2};
+use crate::last_session::last_session::LastSession;
 use crate::server_info_packet::server_info_packet::ServerInfo;
 
+mod last_session;
 mod server_info_packet;
 
 fn main() {
@@ -20,13 +24,13 @@ struct MyEguiApp {
     stream: Option<TcpStream>,
     buf_vec: Vec<u8>,
     address: String,
-    server_info: ServerInfo, // TODO: have the program remember previous address used, could be simple text file
-    // TODO: also have the program remember the previous sessions window size, so it can copy that as well, not sure if possible due to having to load native options before egui, worth a try.
+    server_info: ServerInfo,
     frames: i32,
     displaying_disks: bool,
     displaying_interfaces: bool,
     displaying_cpus: bool,
     update_rate: f32,
+    first_run: bool,
 
 }
 
@@ -35,13 +39,14 @@ impl MyEguiApp {
         Self{
             stream: None,
             buf_vec: vec![],
-            address: "localhost:8111".to_string(), // TODO: have the program remember previous address used, could be simple text file
+            address: "localhost:8111".to_string(),
             server_info: ServerInfo::default(),
             frames: 0,
             displaying_disks: false,
             displaying_interfaces: false,
             displaying_cpus: false,
-            update_rate: 0.5
+            update_rate: 0.5,
+            first_run: true,
         }
     }
 }
@@ -76,11 +81,24 @@ fn deserialize_server_info(data: &String) -> Option<ServerInfo> {
     return if result.is_ok() {
         Some(result.unwrap())
     } else { None }
-
 }
 
 impl eframe::App for MyEguiApp {
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+
+        if self.first_run {
+            self.first_run = false;
+
+            let ls = match last_session::last_session::read_from_file("last_session.sav") {
+                Ok(f) => {f}
+                Err(_) => {LastSession{ address: "localhost:8111".to_string(), screen_dimension: (900.0, 900.0) }}
+            };
+
+            self.address = ls.address;
+            let size = Vec2{ x: ls.screen_dimension.0, y: ls.screen_dimension.1 };
+            frame.set_window_size(size);
+        }
+
         egui::CentralPanel::default().show(ctx, |ui| {
 
             ctx.request_repaint();
@@ -132,6 +150,11 @@ impl eframe::App for MyEguiApp {
                 self.stream = match TcpStream::connect(self.address.as_str()) {
                     // TODO: probably best to save the connected session here as this runs rarely.
                     Ok(s) => {
+
+                        let size = frame.info().window_info.size;
+                        let ls = LastSession{ address: self.address.to_string(), screen_dimension: (size.x, size.y) };
+                        last_session::last_session::write_to_file("last_session.sav", ls).expect("Unable to write to file.");
+
                         Some(s)
                     }
                     Err(_) => {
