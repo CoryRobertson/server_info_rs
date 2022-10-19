@@ -109,13 +109,9 @@ fn handle_client(mut stream: &TcpStream, info: ServerInfo) -> bool {
 
     let ser = serde_json::to_string(&info).unwrap_or_default();
 
-    // stream.write_all(ser.as_bytes()).expect("Unable to write data to client stream.");
-
     let write = stream.write(ser.as_bytes());
 
     let flush = stream.flush();
-
-    //println!("sent: {}", ser.len());
 
     let read = stream.read(&mut [0;128]);
 
@@ -124,7 +120,5 @@ fn handle_client(mut stream: &TcpStream, info: ServerInfo) -> bool {
         stream.shutdown(Shutdown::Both).expect("Unable to shutdown client stream.");
         return false;
     }
-
     return true;
-    //stream.shutdown(Shutdown::Both).expect("Unable to shutdown client stream.");
 }

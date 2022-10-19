@@ -14,7 +14,7 @@ pub mod last_session {
     }
 
     impl LastSession {
-        pub fn convert_to_string(&self) -> String {
+        fn convert_to_string(&self) -> String {
             let mut s = String::new();
             let _ = s.write_str(&*self.address);
             let _ = s.write_str(",");
@@ -55,8 +55,7 @@ pub mod last_session {
             Ok(_) => {}
             Err(e) => {return Err(format!("Could not write to file: {}, {}", e, display).to_string());}
         };
-        
-        
+
         return Ok(());
     }
 

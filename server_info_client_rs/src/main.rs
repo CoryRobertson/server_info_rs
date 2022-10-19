@@ -31,7 +31,6 @@ struct MyEguiApp {
     displaying_cpus: bool,
     update_rate: f32,
     first_run: bool,
-
 }
 
 impl MyEguiApp {
@@ -77,7 +76,7 @@ fn toggle_ui_compact(ui: &mut egui::Ui, on: &mut bool) -> egui::Response {
 }
 
 fn deserialize_server_info(data: &String) -> Option<ServerInfo> {
-     let result = serde_json::from_str(data);
+    let result = serde_json::from_str(data);
     return if result.is_ok() {
         Some(result.unwrap())
     } else { None }
@@ -193,8 +192,8 @@ impl eframe::App for MyEguiApp {
             }
 
             if self.displaying_interfaces {
-                for iface in &self.server_info.net_interfaces {
-                    ui.colored_label(Color32::from_rgb(255,255,255),iface);
+                for interface in &self.server_info.net_interfaces {
+                    ui.colored_label(Color32::from_rgb(255,255,255), interface);
                 }
             }
 
