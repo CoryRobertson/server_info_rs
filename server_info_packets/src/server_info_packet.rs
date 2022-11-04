@@ -1,18 +1,14 @@
-
-
-
 pub mod server_info_packet {
-    use std::fmt;
-    use std::fmt::{Formatter};
+    use chrono::TimeZone;
     use chrono::{DateTime, NaiveDateTime, Utc};
     use chrono_tz::Tz;
-    use serde::{Deserialize, Serialize, Serializer};
     use chrono_tz::US::Pacific;
-    use chrono::{TimeZone};
     use serde::ser::SerializeStruct;
+    use serde::{Deserialize, Serialize, Serializer};
+    use std::fmt;
+    use std::fmt::Formatter;
 
-    #[derive(Deserialize)]
-    #[derive(Default)]
+    #[derive(Deserialize, Default)]
     pub struct ServerInfo {
         pub date: i64,
         pub disks: Vec<String>,
@@ -32,10 +28,10 @@ pub mod server_info_packet {
     impl ServerInfo {
         pub fn get_date_time(&self) -> DateTime<Tz> {
             // pacific time zone conversion
-            let utc = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(self.date, 0), Utc).naive_utc();
+            let utc = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(self.date, 0), Utc)
+                .naive_utc();
             Pacific.from_utc_datetime(&utc)
         }
-
     }
 
     impl fmt::Display for ServerInfo {
@@ -92,7 +88,6 @@ pub mod server_info_packet {
             f.write_str(self.total_cpus.to_string().as_str())?;
             f.write_str("\n")?;
 
-
             for cpu in &self.cpus {
                 f.write_str(cpu)?;
                 f.write_str("\n")?;
@@ -107,10 +102,10 @@ pub mod server_info_packet {
 
     impl Serialize for ServerInfo {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-            where
-                S: Serializer,
+        where
+            S: Serializer,
         {
-            let mut state = serializer.serialize_struct("ServerInfo",13)?;
+            let mut state = serializer.serialize_struct("ServerInfo", 13)?;
             state.serialize_field("date", &self.date)?;
             state.serialize_field("disks", &self.disks)?;
             state.serialize_field("net_interfaces", &self.net_interfaces)?;
@@ -127,6 +122,4 @@ pub mod server_info_packet {
             state.end()
         }
     }
-
 }
-

@@ -2,21 +2,23 @@
 
 extern crate core;
 
+use crate::egui::{Color32, Vec2};
+use crate::last_session::last_session::LastSession;
+use eframe::egui;
+use server_info_packets::server_info_packet::server_info_packet::ServerInfo;
 use std::borrow::Cow;
 use std::io::{Read, Write};
 use std::net::{Shutdown, TcpStream};
-use eframe::egui;
-use crate::egui::{Color32, Vec2};
-use crate::last_session::last_session::LastSession;
-use crate::server_info_packet::server_info_packet::ServerInfo;
-
 mod last_session;
-mod server_info_packet;
 
 fn main() {
     let mut native_options = eframe::NativeOptions::default();
     native_options.initial_window_size = Option::from(Vec2::new(900.0, 800.0));
-    eframe::run_native("Server Info Client", native_options, Box::new(|cc| Box::new(MyEguiApp::new(cc))));
+    eframe::run_native(
+        "Server Info Client",
+        native_options,
+        Box::new(|cc| Box::new(MyEguiApp::new(cc))),
+    );
 }
 
 #[derive(Default)]
@@ -35,7 +37,7 @@ struct MyEguiApp {
 
 impl MyEguiApp {
     fn new(_cc: &eframe::CreationContext<'_>) -> Self {
-        Self{
+        Self {
             stream: None,
             buf_vec: vec![],
             address: "localhost:8111".to_string(),
@@ -79,51 +81,63 @@ fn deserialize_server_info(data: &String) -> Option<ServerInfo> {
     let result = serde_json::from_str(data);
     return if result.is_ok() {
         Some(result.unwrap())
-    } else { None }
+    } else {
+        None
+    };
 }
 
 impl eframe::App for MyEguiApp {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-
         if self.first_run {
             self.first_run = false;
 
             let ls = match last_session::last_session::read_from_file("last_session.sav") {
-                Ok(f) => {f}
-                Err(_) => {LastSession{ address: "localhost:8111".to_string(), screen_dimension: (900.0, 900.0) }}
+                Ok(f) => f,
+                Err(_) => LastSession {
+                    address: "localhost:8111".to_string(),
+                    screen_dimension: (900.0, 900.0),
+                },
             };
 
             self.address = ls.address;
-            let size = Vec2{ x: ls.screen_dimension.0, y: ls.screen_dimension.1 };
+            let size = Vec2 {
+                x: ls.screen_dimension.0,
+                y: ls.screen_dimension.1,
+            };
             frame.set_window_size(size);
         }
 
         egui::CentralPanel::default().show(ctx, |ui| {
-
             ctx.request_repaint();
             let data: Cow<str>;
 
             let found_data = match self.stream {
                 Some(_) => {
-                    if self.frames as f32 > (60.0)/self.update_rate {
-                        let mut small_buf:[u8 ; 4096] = [0 ; 4096];
-                        self.stream.as_ref().unwrap().read(&mut small_buf).unwrap_or_default();
+                    if self.frames as f32 > (60.0) / self.update_rate {
+                        let mut small_buf: [u8; 4096] = [0; 4096];
+                        self.stream
+                            .as_ref()
+                            .unwrap()
+                            .read(&mut small_buf)
+                            .unwrap_or_default();
 
-                        for value in small_buf { // make small buffer of the data into a vector sent by the server
+                        for value in small_buf {
+                            // make small buffer of the data into a vector sent by the server
                             if !String::from_utf8_lossy(&[value]).contains("\0") {
                                 self.buf_vec.push(value);
                             }
                         }
                         let _ = self.stream.as_ref().unwrap().write(&[0]);
                         data = String::from_utf8_lossy(&*self.buf_vec); // convert the vector to a string
-                        match deserialize_server_info(&data.to_string()) { // deserialize the string into a server info struct only if the data received was able to be deserialized properly
+                        match deserialize_server_info(&data.to_string()) {
+                            // deserialize the string into a server info struct only if the data received was able to be deserialized properly
                             Some(sinfo) => self.server_info = sinfo,
                             None => (),
                         }
                     }
                     true
                 }
-                None => {false}
+                None => false,
             };
 
             ui.text_edit_singleline(&mut self.address);
@@ -131,28 +145,30 @@ impl eframe::App for MyEguiApp {
             ui.horizontal(|ui| {
                 ui.horizontal(|ui| {
                     ui.label("Display CPU info: ");
-                    toggle_ui_compact(ui,&mut self.displaying_cpus);
+                    toggle_ui_compact(ui, &mut self.displaying_cpus);
                 });
 
                 ui.horizontal(|ui| {
                     ui.label("Display network info: ");
-                    toggle_ui_compact(ui,&mut self.displaying_interfaces);
+                    toggle_ui_compact(ui, &mut self.displaying_interfaces);
                 });
 
                 ui.horizontal(|ui| {
                     ui.label("Display disk info: ");
-                    toggle_ui_compact(ui,&mut self.displaying_disks);
+                    toggle_ui_compact(ui, &mut self.displaying_disks);
                 });
             });
 
             if ui.button("Connect").clicked() {
                 self.stream = match TcpStream::connect(self.address.as_str()) {
-                    // TODO: probably best to save the connected session here as this runs rarely.
                     Ok(s) => {
-
                         let size = frame.info().window_info.size;
-                        let ls = LastSession{ address: self.address.to_string(), screen_dimension: (size.x, size.y) };
-                        last_session::last_session::write_to_file("last_session.sav", ls).expect("Unable to write to file.");
+                        let ls = LastSession {
+                            address: self.address.to_string(),
+                            screen_dimension: (size.x, size.y),
+                        };
+                        last_session::last_session::write_to_file("last_session.sav", ls)
+                            .expect("Unable to write to file.");
 
                         Some(s)
                     }
@@ -165,15 +181,20 @@ impl eframe::App for MyEguiApp {
 
             ui.horizontal(|ui| {
                 ui.label("Update Rate: ");
-                ui.add(egui::Slider::new(&mut self.update_rate,0.1..=2.0)).on_hover_text("Update rate per second.");
+                ui.add(egui::Slider::new(&mut self.update_rate, 0.1..=2.0))
+                    .on_hover_text("Update rate per second.");
             });
 
             if ui.button("Disconnect").clicked() {
                 match &self.stream {
-                    None => {println!("failed to disconnect");}
+                    None => {
+                        println!("failed to disconnect");
+                    }
                     Some(stream) => {
                         println!("disconnected");
-                        stream.shutdown(Shutdown::Both).expect("Unable to shutdown tcp stream.");
+                        stream
+                            .shutdown(Shutdown::Both)
+                            .expect("Unable to shutdown tcp stream.");
                         self.stream = None;
                     }
                 }
@@ -187,22 +208,21 @@ impl eframe::App for MyEguiApp {
 
             if self.displaying_disks {
                 for disk in &self.server_info.disks {
-                    ui.colored_label(Color32::from_rgb(255,255,255),disk);
+                    ui.colored_label(Color32::from_rgb(255, 255, 255), disk);
                 }
             }
 
             if self.displaying_interfaces {
                 for interface in &self.server_info.net_interfaces {
-                    ui.colored_label(Color32::from_rgb(255,255,255), interface);
+                    ui.colored_label(Color32::from_rgb(255, 255, 255), interface);
                 }
             }
 
             if self.displaying_cpus {
                 for cpu in &self.server_info.cpus {
-                    ui.colored_label(Color32::from_rgb(255,255,255),cpu);
+                    ui.colored_label(Color32::from_rgb(255, 255, 255), cpu);
                 }
             }
-
 
             ui.horizontal(|ui| {
                 ui.label("Average CPU Usage: ");
@@ -215,7 +235,6 @@ impl eframe::App for MyEguiApp {
                 let total_ram: f64 = self.server_info.total_ram as f64 / 1000000000.0;
                 let s = format_args!("{:.2} GB", total_ram).to_string();
                 ui.label(s);
-
             });
 
             ui.horizontal(|ui| {
@@ -251,6 +270,4 @@ impl eframe::App for MyEguiApp {
             self.frames = self.frames + 1;
         });
     }
-
-
 }
