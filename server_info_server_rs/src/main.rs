@@ -1,5 +1,5 @@
 use chrono::Utc;
-use server_info_packets::server_info_packet::server_info_packet::*;
+use server_info_packets::server_info_packet::*;
 use std::io::{Read, Write as OtherWrite};
 use std::net::{Shutdown, TcpListener, TcpStream};
 use std::string::String;
@@ -30,10 +30,10 @@ fn main() {
 
         let handle = thread::spawn(move || {
             let stream = incomming.expect("failed to handle");
-            println!("Client connected: {:?}", stream);
+            println!("Client connected: {stream:?}");
             loop {
                 if !handle_client(&stream, generate_server_info_packet()) {
-                    println!("Client disconnected: {:?}", stream);
+                    println!("Client disconnected: {stream:?}");
                     break;
                 }
             }
@@ -61,7 +61,7 @@ fn generate_server_info_packet() -> ServerInfo {
     let mut disks: Vec<String> = vec![];
 
     for disk in sys.disks() {
-        disks.push(format_args!("{:?}", disk).to_string());
+        disks.push(format_args!("{disk:?}").to_string());
     }
 
     let mut net_interfaces: Vec<String> = vec![];
@@ -81,7 +81,7 @@ fn generate_server_info_packet() -> ServerInfo {
     let mut components: Vec<String> = vec![];
 
     for component in sys.components() {
-        components.push(format_args!("{:?}", component).to_string());
+        components.push(format_args!("{component:?}").to_string());
     }
 
     let total_ram = sys.total_memory();
@@ -101,10 +101,10 @@ fn generate_server_info_packet() -> ServerInfo {
     let mut cpus: Vec<String> = vec![];
 
     for cpu in sys.cpus() {
-        cpus.push(format_args!("{:?}", cpu).to_string());
-        avg_cpu_usage = avg_cpu_usage + cpu.cpu_usage();
+        cpus.push(format_args!("{cpu:?}").to_string());
+        avg_cpu_usage += cpu.cpu_usage();
     }
-    avg_cpu_usage = avg_cpu_usage / total_cpus as f32;
+    avg_cpu_usage /= total_cpus as f32;
 
     ServerInfo {
         date: Utc::now().timestamp(),
@@ -138,5 +138,5 @@ fn handle_client(mut stream: &TcpStream, info: ServerInfo) -> bool {
             .expect("Unable to shutdown client stream.");
         return false;
     }
-    return true;
+    true
 }

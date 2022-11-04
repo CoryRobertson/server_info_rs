@@ -1,0 +1,9 @@
+version: '3'
+
+services:
+  info:
+    image: "server_info_rs:latest"
+    container_name: "server_info_rs"
+    restart: unless-stopped
+    ports:
+        - "0.0.0.0:8111:8111"

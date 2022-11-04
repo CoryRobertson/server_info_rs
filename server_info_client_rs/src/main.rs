@@ -3,17 +3,20 @@
 extern crate core;
 
 use crate::egui::{Color32, Vec2};
-use crate::last_session::last_session::LastSession;
+use crate::last_session::LastSession;
 use eframe::egui;
-use server_info_packets::server_info_packet::server_info_packet::ServerInfo;
+use server_info_packets::server_info_packet::ServerInfo;
 use std::borrow::Cow;
 use std::io::{Read, Write};
 use std::net::{Shutdown, TcpStream};
 mod last_session;
 
 fn main() {
-    let mut native_options = eframe::NativeOptions::default();
-    native_options.initial_window_size = Option::from(Vec2::new(900.0, 800.0));
+    let native_options = eframe::NativeOptions {
+        initial_window_size: Option::from(Vec2::new(900.0, 800.0)),
+        ..Default::default()
+    };
+    //native_options.initial_window_size = Option::from(Vec2::new(900.0, 800.0));
     eframe::run_native(
         "Server Info Client",
         native_options,
@@ -77,13 +80,17 @@ fn toggle_ui_compact(ui: &mut egui::Ui, on: &mut bool) -> egui::Response {
     response
 }
 
-fn deserialize_server_info(data: &String) -> Option<ServerInfo> {
+fn deserialize_server_info(data: &str) -> Option<ServerInfo> {
     let result = serde_json::from_str(data);
-    return if result.is_ok() {
-        Some(result.unwrap())
-    } else {
-        None
-    };
+    // if result.is_ok() {
+    //     Some(result.unwrap())
+    // } else {
+    //     None
+    // }
+    if let Ok(res) = result {
+        return Some(res);
+    }
+    None
 }
 
 impl eframe::App for MyEguiApp {
@@ -91,7 +98,7 @@ impl eframe::App for MyEguiApp {
         if self.first_run {
             self.first_run = false;
 
-            let ls = match last_session::last_session::read_from_file("last_session.sav") {
+            let ls = match last_session::read_from_file("last_session.sav") {
                 Ok(f) => f,
                 Err(_) => LastSession {
                     address: "localhost:8111".to_string(),
@@ -123,16 +130,19 @@ impl eframe::App for MyEguiApp {
 
                         for value in small_buf {
                             // make small buffer of the data into a vector sent by the server
-                            if !String::from_utf8_lossy(&[value]).contains("\0") {
+                            if !String::from_utf8_lossy(&[value]).contains('\0') {
                                 self.buf_vec.push(value);
                             }
                         }
                         let _ = self.stream.as_ref().unwrap().write(&[0]);
-                        data = String::from_utf8_lossy(&*self.buf_vec); // convert the vector to a string
-                        match deserialize_server_info(&data.to_string()) {
-                            // deserialize the string into a server info struct only if the data received was able to be deserialized properly
-                            Some(sinfo) => self.server_info = sinfo,
-                            None => (),
+                        data = String::from_utf8_lossy(&self.buf_vec); // convert the vector to a string
+                                                                       // match deserialize_server_info(&data) {
+                                                                       //     // deserialize the string into a server info struct only if the data received was able to be deserialized properly
+                                                                       //     Some(sinfo) => self.server_info = sinfo,
+                                                                       //     None => (),
+                                                                       // }
+                        if let Some(sinfo) = deserialize_server_info(&data) {
+                            self.server_info = sinfo
                         }
                     }
                     true
@@ -167,7 +177,7 @@ impl eframe::App for MyEguiApp {
                             address: self.address.to_string(),
                             screen_dimension: (size.x, size.y),
                         };
-                        last_session::last_session::write_to_file("last_session.sav", ls)
+                        last_session::write_to_file("last_session.sav", ls)
                             .expect("Unable to write to file.");
 
                         Some(s)
@@ -233,14 +243,14 @@ impl eframe::App for MyEguiApp {
             ui.horizontal(|ui| {
                 ui.label("Total Ram: ");
                 let total_ram: f64 = self.server_info.total_ram as f64 / 1000000000.0;
-                let s = format_args!("{:.2} GB", total_ram).to_string();
+                let s = format_args!("{total_ram:.2} GB").to_string();
                 ui.label(s);
             });
 
             ui.horizontal(|ui| {
                 ui.label("Used Ram: ");
                 let used_ram: f64 = self.server_info.used_memory as f64 / 1000000000.0;
-                let s = format_args!("{:.2} GB", used_ram).to_string();
+                let s = format_args!("{used_ram:.2} GB").to_string();
                 ui.label(s);
             });
 
@@ -267,7 +277,7 @@ impl eframe::App for MyEguiApp {
             if self.frames as f32 > ((60.0) / self.update_rate) {
                 self.frames = 0;
             }
-            self.frames = self.frames + 1;
+            self.frames += 1;
         });
     }
 }
