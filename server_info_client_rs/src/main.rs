@@ -9,7 +9,12 @@ use server_info_packets::server_info_packet::ServerInfo;
 use std::borrow::Cow;
 use std::io::{Read, Write};
 use std::net::{Shutdown, TcpStream};
+use eframe::egui::{Pos2, Rounding};
+use eframe::epaint::Rect;
+
 mod last_session;
+
+static LAST_SESSION_FILE_NAME: &str = "server_info_last_session.sav";
 
 fn main() {
     let native_options = eframe::NativeOptions {
@@ -55,7 +60,7 @@ impl MyEguiApp {
     }
 }
 
-// thank you online example <3
+/// thank you online example <3
 fn toggle_ui_compact(ui: &mut egui::Ui, on: &mut bool) -> egui::Response {
     let desired_size = ui.spacing().interact_size.y * egui::vec2(2.0, 1.0);
     let (rect, mut response) = ui.allocate_exact_size(desired_size, egui::Sense::click());
@@ -80,6 +85,7 @@ fn toggle_ui_compact(ui: &mut egui::Ui, on: &mut bool) -> egui::Response {
     response
 }
 
+/// Deserializes a given string into a ServerInfo struct, returns none if data is invalid
 fn deserialize_server_info(data: &str) -> Option<ServerInfo> {
     let result = serde_json::from_str(data);
     // if result.is_ok() {
@@ -98,7 +104,7 @@ impl eframe::App for MyEguiApp {
         if self.first_run {
             self.first_run = false;
 
-            let ls = match last_session::read_from_file("last_session.sav") {
+            let ls = match last_session::read_from_file(LAST_SESSION_FILE_NAME) {
                 Ok(f) => f,
                 Err(_) => LastSession {
                     address: "localhost:8111".to_string(),
@@ -118,36 +124,33 @@ impl eframe::App for MyEguiApp {
             ctx.request_repaint();
             let data: Cow<str>;
 
-            let found_data = match self.stream {
+            let found_data = match &self.stream {
                 Some(_) => {
                     if self.frames as f32 > (60.0) / self.update_rate {
                         let mut small_buf: [u8; 4096] = [0; 4096];
-                        self.stream
-                            .as_ref()
-                            .unwrap()
-                            .read(&mut small_buf)
-                            .unwrap_or_default();
+                        match self.stream.as_ref().unwrap().read(&mut small_buf) { // try to read stream into a buffer
+                            Ok(_) => { // data was able to be read
 
-                        for value in small_buf {
-                            // make small buffer of the data into a vector sent by the server
-                            if !String::from_utf8_lossy(&[value]).contains('\0') {
-                                self.buf_vec.push(value);
+                                for value in small_buf {
+                                    // make small buffer of the data into a vector sent by the server
+                                    if !String::from_utf8_lossy(&[value]).contains('\0') {
+                                        self.buf_vec.push(value);
+                                    }
+                                }
+                                let _ = self.stream.as_ref().unwrap().write(&[0]);
+                                data = String::from_utf8_lossy(&self.buf_vec); // convert the vector to a string
+                                if let Some(sinfo) = deserialize_server_info(&data) {
+                                    self.server_info = sinfo
+                                }
                             }
-                        }
-                        let _ = self.stream.as_ref().unwrap().write(&[0]);
-                        data = String::from_utf8_lossy(&self.buf_vec); // convert the vector to a string
-                                                                       // match deserialize_server_info(&data) {
-                                                                       //     // deserialize the string into a server info struct only if the data received was able to be deserialized properly
-                                                                       //     Some(sinfo) => self.server_info = sinfo,
-                                                                       //     None => (),
-                                                                       // }
-                        if let Some(sinfo) = deserialize_server_info(&data) {
-                            self.server_info = sinfo
-                        }
+                            Err(_) => { // data was not able to be read, because of this, remove the stream
+                                self.stream = None;
+                            }
+                        };
                     }
                     true
                 }
-                None => false,
+                None => {false},
             };
 
             ui.text_edit_singleline(&mut self.address);
@@ -172,12 +175,14 @@ impl eframe::App for MyEguiApp {
             if ui.button("Connect").clicked() {
                 self.stream = match TcpStream::connect(self.address.as_str()) {
                     Ok(s) => {
+                        s.set_read_timeout(Some(core::time::Duration::from_secs(5))).unwrap();
+                        s.set_write_timeout(Some(core::time::Duration::from_secs(5))).unwrap();
                         let size = frame.info().window_info.size;
                         let ls = LastSession {
                             address: self.address.to_string(),
                             screen_dimension: (size.x, size.y),
                         };
-                        last_session::write_to_file("last_session.sav", ls)
+                        last_session::write_to_file(LAST_SESSION_FILE_NAME, ls)
                             .expect("Unable to write to file.");
 
                         Some(s)
@@ -273,6 +278,34 @@ impl eframe::App for MyEguiApp {
                 ui.label("Host Name: ");
                 ui.label(&self.server_info.host_name);
             });
+
+
+            let indicator_rect_color = {
+                if found_data {
+                    Color32::from_rgb(50,255,50)}
+                else {
+                    Color32::from_rgb(255,50,50)
+                }
+            };
+            ui.painter().rect_filled(
+                Rect::from_two_pos(
+                    Pos2::new(245.0,50.0),
+                    Pos2::new(245.0 + 50.0,50.0 + 50.0)
+                ),
+                Rounding::none(),
+                indicator_rect_color
+            );
+
+            #[cfg(debug_assertions)]
+            {
+                let mousepos = match ctx.pointer_hover_pos() {
+                    None => {Pos2::new(0.0,0.0)}
+                    Some(a) => {a}
+                };
+                ui.label(format!("DEBUG mouse pos: {},{}", mousepos.x,mousepos.y));
+            }
+
+            egui::warn_if_debug_build(ui);
 
             if self.frames as f32 > ((60.0) / self.update_rate) {
                 self.frames = 0;

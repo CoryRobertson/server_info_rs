@@ -1,6 +1,6 @@
 [package]
 name = "server_info_client_rs"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 eframe = "0.19.0"
 chrono = "0.4.22"
-chrono-tz = { version = "0.6.3", features = ["serde"] }
+chrono-tz = { version = "0.8.0", features = ["serde"] }
 serde = { version = "1.0.145", features = ["derive"] }
 serde_json = "1.0.85"
 sysinfo = "0.26.4"
