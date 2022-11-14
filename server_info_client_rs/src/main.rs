@@ -5,12 +5,12 @@ extern crate core;
 use crate::egui::{Color32, Vec2};
 use crate::last_session::LastSession;
 use eframe::egui;
+use eframe::egui::{Pos2, Rounding};
+use eframe::epaint::Rect;
 use server_info_packets::server_info_packet::ServerInfo;
 use std::borrow::Cow;
 use std::io::{Read, Write};
 use std::net::{Shutdown, TcpStream};
-use eframe::egui::{Pos2, Rounding};
-use eframe::epaint::Rect;
 
 mod last_session;
 
@@ -128,8 +128,10 @@ impl eframe::App for MyEguiApp {
                 Some(_) => {
                     if self.frames as f32 > (60.0) / self.update_rate {
                         let mut small_buf: [u8; 4096] = [0; 4096];
-                        match self.stream.as_ref().unwrap().read(&mut small_buf) { // try to read stream into a buffer
-                            Ok(_) => { // data was able to be read
+                        match self.stream.as_ref().unwrap().read(&mut small_buf) {
+                            // try to read stream into a buffer
+                            Ok(_) => {
+                                // data was able to be read
 
                                 for value in small_buf {
                                     // make small buffer of the data into a vector sent by the server
@@ -143,14 +145,15 @@ impl eframe::App for MyEguiApp {
                                     self.server_info = sinfo
                                 }
                             }
-                            Err(_) => { // data was not able to be read, because of this, remove the stream
+                            Err(_) => {
+                                // data was not able to be read, because of this, remove the stream
                                 self.stream = None;
                             }
                         };
                     }
                     true
                 }
-                None => {false},
+                None => false,
             };
 
             ui.text_edit_singleline(&mut self.address);
@@ -175,8 +178,10 @@ impl eframe::App for MyEguiApp {
             if ui.button("Connect").clicked() {
                 self.stream = match TcpStream::connect(self.address.as_str()) {
                     Ok(s) => {
-                        s.set_read_timeout(Some(core::time::Duration::from_secs(5))).unwrap();
-                        s.set_write_timeout(Some(core::time::Duration::from_secs(5))).unwrap();
+                        s.set_read_timeout(Some(core::time::Duration::from_secs(5)))
+                            .unwrap();
+                        s.set_write_timeout(Some(core::time::Duration::from_secs(5)))
+                            .unwrap();
                         let size = frame.info().window_info.size;
                         let ls = LastSession {
                             address: self.address.to_string(),
@@ -279,30 +284,26 @@ impl eframe::App for MyEguiApp {
                 ui.label(&self.server_info.host_name);
             });
 
-
             let indicator_rect_color = {
                 if found_data {
-                    Color32::from_rgb(50,255,50)}
-                else {
-                    Color32::from_rgb(255,50,50)
+                    Color32::from_rgb(50, 255, 50)
+                } else {
+                    Color32::from_rgb(255, 50, 50)
                 }
             };
             ui.painter().rect_filled(
-                Rect::from_two_pos(
-                    Pos2::new(245.0,50.0),
-                    Pos2::new(245.0 + 50.0,50.0 + 50.0)
-                ),
+                Rect::from_two_pos(Pos2::new(245.0, 50.0), Pos2::new(245.0 + 50.0, 50.0 + 50.0)),
                 Rounding::none(),
-                indicator_rect_color
+                indicator_rect_color,
             );
 
             #[cfg(debug_assertions)]
             {
                 let mousepos = match ctx.pointer_hover_pos() {
-                    None => {Pos2::new(0.0,0.0)}
-                    Some(a) => {a}
+                    None => Pos2::new(0.0, 0.0),
+                    Some(a) => a,
                 };
-                ui.label(format!("DEBUG mouse pos: {},{}", mousepos.x,mousepos.y));
+                ui.label(format!("DEBUG mouse pos: {},{}", mousepos.x, mousepos.y));
             }
 
             egui::warn_if_debug_build(ui);
